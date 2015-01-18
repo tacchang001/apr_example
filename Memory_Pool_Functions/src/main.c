@@ -1,23 +1,52 @@
-#include <stdlib.h>
-#include <apr.h>
-#include <apr_general.h>
+#include <stdio.h>
 #include <apr_pools.h>
-#include <apr_strings.h>
-#include <apr_file_io.h>
 
-static apr_file_t *apr_stdout, *apr_stdin, *apr_stderr;
-
+/**
+ * http://kurukurupapa.hatenablog.com/entries/2008/01/14
+ */
 int main(int argc, const char* const *argv) {
-  apr_pool_t *p;
-  char *str;
+    apr_status_t status = APR_SUCCESS;
+    apr_pool_t *pool = NULL;
+    apr_pool_t *pool2 = NULL;
+    void *ptr = NULL;
 
-  apr_app_initialize(&argc, &argv, NULL);
-  apr_pool_create(&p, NULL);
-  apr_file_open_stdout(&apr_stdout, p);
-  apr_file_open_stdin(&apr_stdin, p);
-  apr_file_open_stderr(&apr_stderr, p);
+    // APRを初期化する。
+    apr_initialize();
 
-  str = apr_pstrcat(p, "Hello", ", ", "World", NULL);
-  apr_file_printf(apr_stdout, "%s\n", str);
-  return EXIT_SUCCESS;
+    // 親プールを作成する。
+    status = apr_pool_create(&pool, NULL);
+    if (status == APR_SUCCESS) {
+
+        // メモリを確保する。
+        ptr = apr_pcalloc(pool, 10);
+
+        // 子プールを作成する。
+        status = apr_pool_create(&pool2, pool);
+        if (status == APR_SUCCESS) {
+
+            // メモリを確保する。
+            ptr = apr_pcalloc(pool2, 10);
+            if (ptr != NULL) {
+                // 書き込み
+                strcpy((char*) ptr, "Hello");
+
+                printf("書き込み結果 [%s]\n", ptr);
+            }
+
+            // メモリを解放する。
+            apr_pool_clear(pool2);
+        } else {
+            printf("子プールを作成できませんでした。\n");
+        }
+
+        // プールを破棄する。
+        apr_pool_destroy(pool);
+    } else {
+        printf("親プールを作成できませんでした。\n");
+    }
+
+    // APRを終了する。
+    apr_terminate();
+
+    return 0;
 }
